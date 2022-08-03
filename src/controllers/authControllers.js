@@ -42,3 +42,12 @@ export async function setNewUser(req, res) {
     res.sendStatus(500);
   }
 }
+
+export async function signin(req, res) {
+  try {
+    res.sendStatus(200);
+  } catch(err) {
+    console.log(err);
+    res.sendStatus(500);
+  }
+}
