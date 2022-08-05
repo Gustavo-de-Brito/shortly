@@ -37,22 +37,6 @@ async function isValidLogin(email, password) {
   return userData;
 }
 
-async function registerToken(userData) {
-  await connection.query(
-    `INSERT INTO sessions ("userId") VALUES ($1)`,
-    [ userData[0].id ]
-  );
-
-  const { rows:userSession } = await connection.query(
-    `SELECT * FROM sessions WHERE "userId" = $1`,
-    [ userData[0].id ]
-  );
-
-  const token = jwt.sign(userSession[0].id, process.env.PRIVATE_KEY_JWT);
-
-  return token;
-}
-
 // routes functions
 export async function setNewUser(req, res) {
   const { name, email, password} = req.body;
@@ -88,7 +72,8 @@ export async function signin(req, res) {
 
     if(!userData) return res.sendStatus(401);
 
-    const token = await registerToken(userData);
+    const expirationTime = { expiresIn: 60 * 60 * 2 };
+    const token = jwt.sign({userId: userData[0].id}, process.env.PRIVATE_KEY_JWT, expirationTime);
 
     res.status(200).send({ token });
   } catch(err) {

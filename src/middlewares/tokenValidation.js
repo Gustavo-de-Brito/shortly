@@ -4,14 +4,14 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 function tokenValidation(req, res, next) {
-  const { token } = req.headers;
+  const { authorization } = req.headers;
 
-  const formatedToken = token?.replace('Bearer ', '');
+  const token = authorization?.replace('Bearer ', '');
 
   try {
-    const sessionId = jwt.verify(formatedToken, process.env.PRIVATE_KEY_JWT);
+    const { userId } = jwt.verify(token, process.env.PRIVATE_KEY_JWT);
 
-    res.locals.sessionId = sessionId;
+    res.locals.userId = userId;
 
     next();
   }catch(err) {
