@@ -26,3 +26,24 @@ export async function decreaseUrl(req, res) {
     res.sendStatus(500);
   }
 }
+
+export async function getUrl(req, res) {
+  const { id: urlId } = req.params;
+
+  try {
+
+    const { rows: urlData } = await connection.query(
+      `SELECT id, "shortUrl", url
+      FROM urls
+      WHERE id = $1;`,
+      [ urlId]
+    );
+
+    if(!urlData[0]) return res.sendStatus(404);
+
+    res.status(200).send(urlData[0]);
+  } catch(err) {
+    console.log(err);
+    res.sendStatus(500);
+  }
+}
