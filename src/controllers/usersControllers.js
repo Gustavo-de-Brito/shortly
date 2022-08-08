@@ -1,16 +1,55 @@
 import connection from '../databases/postgres.js';
 
-const sumVisits = (total, userUrlData) => {
+// routes process and validations functions
+const sumVisits = (userData) => {
   // acess and sum visitCount from object returned from query
-  return total.dataUrl.visitCount + userUrlData.dataUrl.visitCount
+  let qtdVisits = 0;
+
+  userData.forEach(userUrlData => qtdVisits += userUrlData.dataUrl.visitCount);
+
+  return qtdVisits;
 }
 
+function formatUserData(userData) {
+  let visitCount = 0;
+  let shortenedUrls = [];
+  const theresRegisteredUrl = userData[0].dataUrl.visitCount;
 
+  if(theresRegisteredUrl) {
+    visitCount =sumVisits(userData);
+    shortenedUrls =userData.map(userUrlData => userUrlData.dataUrl);
+  }
+
+  const formatedData = {
+    ...userData[0].userData,
+    visitCount,
+    shortenedUrls 
+  };
+
+  return formatedData;
+}
+
+function formatAndOrderRanking(topTenData) {
+  const rankData = topTenData.map(userData => {
+    if(userData.visitCount === null) {
+      return { ...userData, visitCount: "0" };
+  }
+    return userData;
+  });
+
+  const rankingOrdened = [...rankData].sort((a, b) => {
+    return b.visitCount - a.visitCount;
+  });
+
+  return rankingOrdened;
+}
+
+// routes functions
 export async function getUserData(req, res) {
   const { userId } = res.locals;
 
   try {
-    const { rows: userData } = await connection.query(
+    const { rows: queryUserData } = await connection.query(
       `SELECT 
       json_build_object(
         'id', users.id,
@@ -23,20 +62,16 @@ export async function getUserData(req, res) {
         'visitCount', urls."visitCount"
       ) AS "dataUrl"
       FROM users
-      JOIN urls
+      LEFT JOIN urls
       ON urls."userId" = users.id
       WHERE users.id = $1
       GROUP BY users.id, urls.id;`,
       [ userId ]
     );
 
-    const formatedData = {
-      ...userData[0].userData,
-      visitCount: userData.reduce(sumVisits),
-      shortenedUrls: userData.map(userUrlData => userUrlData.dataUrl)
-    };
+    const userData = formatUserData(queryUserData);
 
-    res.status(200).send(formatedData);
+    res.status(200).send(userData);
   } catch(err) {
     console.log(err);
     res.sendStatus(500);
@@ -51,7 +86,7 @@ export async function getRanking(req, res) {
       COUNT(urls.id) AS "linksCount",
       SUM(urls."visitCount") AS "visitCount"
       FROM users
-      JOIN urls
+      LEFT JOIN urls
       ON urls."userId" = users.id
       GROUP BY users.id
       ORDER BY "visitCount" DESC
@@ -59,7 +94,9 @@ export async function getRanking(req, res) {
       `
     );
 
-    res.status(200).send(topTenData);
+    const rankData = formatAndOrderRanking(topTenData);
+
+    res.status(200).send(rankData);
   } catch(err) {
     console.log(err);
     res.sendStatus(500);
