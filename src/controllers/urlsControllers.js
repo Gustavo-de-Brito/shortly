@@ -22,12 +22,25 @@ async function isExistingUrl(urlId) {
   return urlData;
 }
 
+async function alreadyRegisteredUrl(url) {
+  const { rows: urlData } = await connection.query(
+    `SELECT * FROM urls WHERE url = $1;`,
+    [ url ]
+  )
+
+  return urlData[0];
+}
+
 // routes functions
 export async function decreaseUrl(req, res) {
   const { userId } = res.locals;
   const { url } = req.body;
 
   try {
+    const isUrlRegistered = await alreadyRegisteredUrl(url);
+
+    if(isUrlRegistered) return res.sendStatus(409);
+
     const shortUrl = nanoid();
 
     const { rows:userData } = await connection.query(
